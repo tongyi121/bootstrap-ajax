@@ -89,11 +89,12 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
         var args = Array.prototype.slice.call(arguments).splice(2);
         var namespaces = functionName.split(".");
         var func = namespaces.pop();
-        for(var i = 0; i < namespaces.length; i++) {
+        for (var i = 0; i < namespaces.length; i++) {
             context = context[namespaces[i]];
         }
         return context[func].apply(this, args);
     }
+
     function processAjax($this, method, url, data, successCallback) {
         $.ajax({
             url: url,
@@ -102,7 +103,7 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
             success: function (data, textStatus) {
                 processData(data, $this);
                 if (successCallback)
-                    executeFunctionByName(successCallback,window,data,textStatus);
+                    executeFunctionByName(successCallback, window, data, textStatus);
             },
             beforeSend: function () {
                 spin($this, true);
@@ -141,20 +142,28 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
         } else {
             var replace_selector = $el.attr('data-replace'),
                 append_selector = $el.attr('data-append') ,
+                dataType = $el.attr('data-data-type'),
                 refresh_selector = $el.attr('data-refresh');
 
             if (replace_selector) {
-                $(replace_selector).html(data.html).bootAjax();
+                if (dataType == 'json')
+                    $(replace_selector).html(data.html).bootAjax();
+                else
+                    $(replace_selector).html(data).bootAjax();
             }
 
             if (append_selector) {
-                $(append_selector).append(data.html).bootAjax();
+                if (dataType == 'json')
+                    $(append_selector).append(data.html).bootAjax();
+                else
+                    $(append_selector).append(data).bootAjax();
             }
             if (refresh_selector) {
                 $.each($(refresh_selector), function (index, value) {
                     var url = $(value).data('refresh-url'),
                         data = $(value).attr('data-data'),
                         method = $(value).attr('method'),
+                        dataType = $(value).attr('data-data-type'),
                         successCallback = $(value).attr('data-success-callback');
                     if (!method) {
                         method = 'GET';
@@ -164,9 +173,12 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
                         type: method,
                         data: data,
                         success: function (data, textStatus) {
-                            $(value).html(data.html).bootAjax();
+                            if (dataType == 'json')
+                                $(value).html(data.html).bootAjax();
+                            else
+                                $(value).html(data).bootAjax();
                             if (successCallback)
-                                eval(successCallback + ".call(this,data,textStatus)");
+                                executeFunctionByName(successCallback, window, data, textStatus);
                         },
                         error: function (result) {
                             $(value).html(buildErrorMsg(result));
@@ -192,7 +204,7 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
         }
     }
 
-    function buildErrorMsg(result){
+    function buildErrorMsg(result) {
         var errorMsg = "";
         if (result.status == 404)
             errorMsg = "<strong>错误！</strong>HTTP 404-请求的页面不存在或链接错误";
