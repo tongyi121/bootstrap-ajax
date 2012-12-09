@@ -1,5 +1,5 @@
 /* ====================================================================
- * bootstrap-ajax.js v0.1.0
+ * bootstrap-ajax.js v0.2.0
  * ====================================================================
  * Copyright (c) 2012, Eldarion, Inc.
  * All rights reserved.
@@ -29,6 +29,10 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * ==================================================================== */
+ /*
+ *fork by tongyi121,
+ *add something remove something in my idea.
+ */
 
 /*global Spinner:true*/
 if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
