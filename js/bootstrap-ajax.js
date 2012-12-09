@@ -50,7 +50,7 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
 }
 !function ($) {
 
-    'use strict'; // jshint ;_;
+    'use strict';
 
     var Ajax = function () {
     };
@@ -85,7 +85,15 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
         e.preventDefault();
         $this.closest(selector).remove()
     };
-
+    function executeFunctionByName(functionName, context /*, args */) {
+        var args = Array.prototype.slice.call(arguments).splice(2);
+        var namespaces = functionName.split(".");
+        var func = namespaces.pop();
+        for(var i = 0; i < namespaces.length; i++) {
+            context = context[namespaces[i]];
+        }
+        return context[func].apply(this, args);
+    }
     function processAjax($this, method, url, data, successCallback) {
         $.ajax({
             url: url,
@@ -94,12 +102,12 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
             success: function (data, textStatus) {
                 processData(data, $this);
                 if (successCallback)
-                    eval(successCallback + ".call(this,data,textStatus)");
+                    executeFunctionByName(successCallback,window,data,textStatus);
             },
-            beforeSend: function (XMLHttpRequest) {
+            beforeSend: function () {
                 spin($this, true);
             },
-            complete: function (XMLHttpRequest, textStatus) {
+            complete: function () {
                 spin($this, false);
             },
             error: function (result) {
@@ -209,6 +217,4 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
     $(function () {
         $('body').bootAjax();
     })
-
-
 }(window.jQuery);
