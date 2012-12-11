@@ -29,29 +29,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * ==================================================================== */
- /*
+/*
  *fork by tongyi121,
  *add something remove something in my idea.
  */
 
 /*global Spinner:true*/
-if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
-    $.fn.spin = function (opts) {
-        this.each(function () {
-            var $this = $(this),
-                data = $this.data();
 
-            if (data.spinner) {
-                data.spinner.stop();
-                delete data.spinner;
-            }
-            if (opts !== false) {
-                data.spinner = new Spinner($.extend({color: $this.css('color')}, opts)).spin(this);
-            }
-        });
-        return this;
-    };
-}
 !function ($) {
 
     'use strict';
@@ -64,12 +48,20 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
             url = $this.attr('href'),
             data = $this.attr('data-data'),
             method = $this.attr('data-method'),
-            successCallback = $this.attr('data-success-callback');
+            beforeCallback = $this.attr('data-before-callback'),
+            successCallback = $this.attr('data-success-callback'),
+            completeCallback = $this.attr('data-complete-callback'),
+            confirmInfo = $this.attr('data-confirm');
         if (!method) {
             method = 'get'
         }
         e.preventDefault();
-        processAjax($this, method, url, data, successCallback);
+        if (confirmInfo) {
+            if (confirm(confirmInfo))
+                processAjax($this, method, url, data, beforeCallback, successCallback, completeCallback);
+        } else
+            processAjax($this, method, url, data, beforeCallback, successCallback, completeCallback);
+
     };
 
     Ajax.prototype.submit = function (e) {
@@ -77,10 +69,12 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
             url = $this.attr('action') ,
             data = $this.serialize(),
             method = $this.attr('method'),
-            successCallback = $this.attr('data-success-callback');
+            beforeCallback = $this.attr('data-before-callback'),
+            successCallback = $this.attr('data-success-callback'),
+            completeCallback = $this.attr('data-complete-callback');
         $this.find("input[type=submit],button[type=submit]").attr("disabled", "disabled");
         e.preventDefault();
-        processAjax($this, method, url, data, successCallback);
+        processAjax($this, method, url, data, beforeCallback, successCallback, completeCallback);
     };
     //TO DO 要搞清楚应用场景
     Ajax.prototype.cancel = function (e) {
@@ -99,7 +93,7 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
         return context[func].apply(this, args);
     }
 
-    function processAjax($this, method, url, data, successCallback) {
+    function processAjax($this, method, url, data, beforeCallback, successCallback, completeCallback) {
         $.ajax({
             url: url,
             type: method,
@@ -109,11 +103,15 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
                 if (successCallback)
                     executeFunctionByName(successCallback, window, data, textStatus);
             },
-            beforeSend: function () {
-                spin($this, true);
+            beforeSend: function (jqXHR, settings) {
+                spinForReplaceOrAppend($this, true);
+                if (beforeCallback)
+                    executeFunctionByName(beforeCallback, window, jqXHR, settings);
             },
-            complete: function () {
-                spin($this, false);
+            complete: function (jqXHR, textStatus) {
+                spinForReplaceOrAppend($this, false);
+                if (completeCallback)
+                    executeFunctionByName(completeCallback, window, jqXHR, textStatus);
             },
             error: function (result) {
                 processError($this, result);
@@ -121,24 +119,32 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
         })
     }
 
-    function spin($el, flag) { // http://fgnass.github.com/spin.js/
-        if (typeof $.fn.spin !== 'undefined') {
-            var replace_selector = $el.attr('data-replace'),
-                append_selector = $el.attr('data-append') ,
-                refresh_selector = $el.attr('data-refresh'),
-                opts = (flag == true ? {radius: 30, length: 0, width: 10, color: '#C40000', trail: 40} : false);
 
-            if (replace_selector) {
-                $(replace_selector).spin(opts);
-            }
-            if (append_selector) {
-                $(append_selector).spin(opts);
-            }
-            if (refresh_selector) {
-                $(refresh_selector).spin(opts);
-            }
+    var spinOpts = {radius: 30, length: 0, width: 10, color: '#C40000', trail: 40};
+
+    function spin(selector, flag) {
+        var opts = (flag == true ? spinOpts : false);
+        $(selector).spin(opts);
+    }
+
+    function spinForReplaceOrAppend($el, flag) {
+        var replace_selector = $el.attr('data-replace'),
+            append_selector = $el.attr('data-append');
+        if (replace_selector) {
+            spin(replace_selector, flag);
+        }
+        if (append_selector) {
+            spin(append_selector, flag);
         }
     }
+
+    function spinForRefresh($el, flag) {
+        var refresh_selector = $el.attr('data-refresh');
+        if (refresh_selector) {
+            spin(refresh_selector, flag)
+        }
+    }
+
 
     function processData(data, $el) {
         if (data.location) {
@@ -168,7 +174,9 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
                         data = $(value).attr('data-data'),
                         method = $(value).attr('method'),
                         dataType = $(value).attr('data-data-type'),
-                        successCallback = $(value).attr('data-success-callback');
+                        beforeCallback = $(value).attr('data-before-callback'),
+                        successCallback = $(value).attr('data-success-callback'),
+                        completeCallback = $(value).attr('data-complete-callback');
                     if (!method) {
                         method = 'GET';
                     }
@@ -176,6 +184,11 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
                         url: url,
                         type: method,
                         data: data,
+                        beforeSend: function (jqXHR, settings) {
+                            spinForRefresh($(value), true);
+                            if (beforeCallback)
+                                executeFunctionByName(beforeCallback, window, jqXHR, settings);
+                        },
                         success: function (data, textStatus) {
                             if (dataType == 'json')
                                 $(value).html(data.html).bootAjax();
@@ -183,6 +196,11 @@ if (typeof Spinner !== 'undefined') { // http://fgnass.github.com/spin.js/
                                 $(value).html(data).bootAjax();
                             if (successCallback)
                                 executeFunctionByName(successCallback, window, data, textStatus);
+                        },
+                        complete: function (jqXHR, settings) {
+                            spinForRefresh($(value), false);
+                            if (completeCallback)
+                                executeFunctionByName(completeCallback, window, jqXHR, settings);
                         },
                         error: function (result) {
                             $(value).html(buildErrorMsg(result));
