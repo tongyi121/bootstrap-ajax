@@ -1,23 +1,23 @@
 /* ====================================================================
- * bootstrap-ajax.js v0.2.0
+ * bootstrap-ajax.js v0.3.1
  * ====================================================================
  * Copyright (c) 2012, Eldarion, Inc.
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright notice,
  *       this list of conditions and the following disclaimer.
- * 
+ *
  *     * Redistributions in binary form must reproduce the above copyright notice,
  *       this list of conditions and the following disclaimer in the documentation
  *       and/or other materials provided with the distribution.
- * 
+ *
  *     * Neither the name of Eldarion, Inc. nor the names of its contributors may
  *       be used to endorse or promote products derived from this software without
  *       specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -35,7 +35,9 @@
  */
 
 /*global Spinner:true*/
-
+String.prototype.replaceAll  = function(s1,s2){
+    return this.replace(new RegExp(s1,"gm"),s2);
+};
 !function ($) {
 
     'use strict';
@@ -55,6 +57,11 @@
         if (!method) {
             method = 'get'
         }
+
+        if(data){
+            data = $.parseJSON(data.replaceAll("'","\""));
+        }
+
         e.preventDefault();
         if (confirmInfo) {
             if (confirm(confirmInfo))
@@ -179,6 +186,9 @@
                         completeCallback = $(value).attr('data-complete-callback');
                     if (!method) {
                         method = 'GET';
+                    }
+                    if(data){
+                        data = $.parseJSON(data.replaceAll("'","\""));
                     }
                     $.ajax({
                         url: url,
