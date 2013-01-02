@@ -1,5 +1,5 @@
 /* ====================================================================
- * bootstrap-ajax.js v0.3.1
+ * bootstrap-ajax.js v0.4.0
  * ====================================================================
  * Copyright (c) 2012, Eldarion, Inc.
  * All rights reserved.
@@ -35,8 +35,8 @@
  */
 
 /*global Spinner:true*/
-String.prototype.replaceAll  = function(s1,s2){
-    return this.replace(new RegExp(s1,"gm"),s2);
+String.prototype.replaceAll = function (s1, s2) {
+    return this.replace(new RegExp(s1, "gm"), s2);
 };
 !function ($) {
 
@@ -58,17 +58,21 @@ String.prototype.replaceAll  = function(s1,s2){
             method = 'get'
         }
 
-        if(data){
-            data = $.parseJSON(data.replaceAll("'","\""));
+        if (data) {
+            data = $.parseJSON(data.replaceAll("'", "\""));
         }
 
         e.preventDefault();
         if (confirmInfo) {
-            if (confirm(confirmInfo))
+            if (bootbox != undefined)
+                bootbox.confirm(confirmInfo, function (confirmed) {
+                    if (confirmed)
+                        processAjax($this, method, url, data, beforeCallback, successCallback, completeCallback);
+                });
+            else if (confirm(confirmInfo))
                 processAjax($this, method, url, data, beforeCallback, successCallback, completeCallback);
         } else
             processAjax($this, method, url, data, beforeCallback, successCallback, completeCallback);
-
     };
 
     Ajax.prototype.submit = function (e) {
@@ -79,9 +83,14 @@ String.prototype.replaceAll  = function(s1,s2){
             beforeCallback = $this.attr('data-before-callback'),
             successCallback = $this.attr('data-success-callback'),
             completeCallback = $this.attr('data-complete-callback');
-        $this.find("input[type=submit],button[type=submit]").attr("disabled", "disabled");
+
         e.preventDefault();
-        processAjax($this, method, url, data, beforeCallback, successCallback, completeCallback);
+
+        if (!$this.find("input,select,textarea").not("[type=submit]").jqBootstrapValidation("hasErrors")) {
+            $this.find("input[type=submit],button[type=submit]").attr("disabled", "disabled");
+            processAjax($this, method, url, data, beforeCallback, successCallback, completeCallback);
+
+        }
     };
     //TO DO 要搞清楚应用场景
     Ajax.prototype.cancel = function (e) {
@@ -163,16 +172,25 @@ String.prototype.replaceAll  = function(s1,s2){
                 refresh_selector = $el.attr('data-refresh');
 
             if (replace_selector) {
-                if (dataType == 'json')
+                if (dataType == 'json'){
                     $(replace_selector).html(data.html).bootAjax();
+                    if(data.callback){
+                        var params=data.callbackParams?data.callbackParams:{};
+                        executeFunctionByName(data.callback, window,params);
+                    }
+
+                }
+
                 else
                     $(replace_selector).html(data).bootAjax();
             }
 
             if (append_selector) {
-                if (dataType == 'json')
+                if (dataType == 'json'){
                     $(append_selector).append(data.html).bootAjax();
-                else
+                    if(data.callback)
+                        executeFunctionByName(data.callback, window);
+                }else
                     $(append_selector).append(data).bootAjax();
             }
             if (refresh_selector) {
@@ -187,8 +205,8 @@ String.prototype.replaceAll  = function(s1,s2){
                     if (!method) {
                         method = 'GET';
                     }
-                    if(data){
-                        data = $.parseJSON(data.replaceAll("'","\""));
+                    if (data) {
+                        data = $.parseJSON(data.replaceAll("'", "\""));
                     }
                     $.ajax({
                         url: url,
@@ -200,9 +218,11 @@ String.prototype.replaceAll  = function(s1,s2){
                                 executeFunctionByName(beforeCallback, window, jqXHR, settings);
                         },
                         success: function (data, textStatus) {
-                            if (dataType == 'json')
+                            if (dataType == 'json'){
                                 $(value).html(data.html).bootAjax();
-                            else
+                                if(data.callback)
+                                    executeFunctionByName(data.callback, window);
+                            }else
                                 $(value).html(data).bootAjax();
                             if (successCallback)
                                 executeFunctionByName(successCallback, window, data, textStatus);
@@ -238,25 +258,92 @@ String.prototype.replaceAll  = function(s1,s2){
 
     function buildErrorMsg(result) {
         var errorMsg = "";
+        var title = "";
         if (result.status == 404)
-            errorMsg = "<strong>错误！</strong>HTTP 404-请求的页面不存在或链接错误";
+            title = "<strong>错误！</strong>HTTP 404-请求的页面不存在或链接错误";
         else if (result.status == 0)
-            errorMsg = "<strong>错误！</strong> 服务无效，请检查服务器状态";
+            title = "<strong>错误！</strong> 服务无效，请检查服务器状态";
         else if (result.status == 500)
-            errorMsg = "<strong>错误！</strong>HTTP 500内部服务器错误";
+            title = "<strong>错误！</strong>HTTP 500内部服务器错误";
         else
-            errorMsg = "错误代号:" + result.status + ' 错误信息：' + result.statusText;
-        return '<div class="alert alert-error">' + errorMsg + '</div>'
+            title = "<strong>错误！</strong>" + result.status;
+
+        errorMsg = result.responseText;
+
+        return '<div class="modal-header"><button type="button" class="close" data-dismiss="modal">×</button><h3>' + title + '</h3></div><div class="modal-body">' + errorMsg + '</div><div class="modal-footer"><a href="#" class="btn btn-inverse" data-dismiss="modal"><i class="icon-off icon-white"></i>Close</a></div>';
+
     }
 
-    $.fn.bootAjax = function () {
-        return this.each(function () {
-            var $this = $(this);
-            $this.find('a.ajax').bind('click', Ajax.prototype.click);
-            $this.find('form.ajax').bind('submit', Ajax.prototype.submit);
-            $this.find('a[data-cancel-closest]').bind('click', Ajax.prototype.cancel);
-        })
+    $.fn.bootAjax = function (config) {
+        if (!config)
+            return this.each(function () {
+                var $this = $(this);
+                $this.find('a.ajax').bind('click', Ajax.prototype.click);
+                $this.find('form.ajax').bind('submit', Ajax.prototype.submit);
+                $this.find('a[data-cancel-closest]').bind('click', Ajax.prototype.cancel);
+                $this.find('.datepicker').datepicker();
+                //初始化校验
+                $this.find("input,select,textarea").not("[type=submit]").jqBootstrapValidation();
+            });
+        else {
+            var $this = $(this),
+                url = config.url,
+                data = config.data,
+                method = config.method,
+                dataType = config.dataType,
+                beforeCallback = config.beforeSend,
+                successCallback = config.success,
+                completeCallback = config.complete,
+                confirmInfo = config.confirm;
+            if (!method) {
+                method = 'GET';
+            }
+
+            if (!url) {
+                alert("缺少url属性")
+            }
+
+
+            if (confirmInfo) {
+                if (bootbox != undefined)
+                    bootbox.confirm(confirmInfo, function (confirmed) {
+                        if (confirmed)
+                            processAjax($this, method, url, data, beforeCallback, successCallback, completeCallback);
+                    });
+                else if (confirm(confirmInfo))
+                    processAjax($this, method, url, data, beforeCallback, successCallback, completeCallback);
+            } else {
+                $.ajax({
+                    url: url,
+                    type: method,
+                    data: data,
+                    success: function (data, textStatus) {
+                        if (dataType == 'json')
+                            $this.html(data.html).bootAjax();
+                        else
+                            $this.html(data).bootAjax();
+                        if (successCallback)
+                            executeFunctionByName(successCallback, window, data, textStatus);
+                    },
+                    beforeSend: function (jqXHR, settings) {
+                        spin($this, true);
+                        if (beforeCallback)
+                            executeFunctionByName(beforeCallback, window, jqXHR, settings);
+                    },
+                    complete: function (jqXHR, textStatus) {
+                        spinForReplaceOrAppend($this, false);
+                        if (completeCallback)
+                            executeFunctionByName(completeCallback, window, jqXHR, textStatus);
+                    },
+                    error: function (result) {
+                        processError($this, result);
+                    }
+                })
+            }
+
+        }
     };
+
 
     $(function () {
         $('body').bootAjax();
