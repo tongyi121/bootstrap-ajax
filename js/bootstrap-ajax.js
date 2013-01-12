@@ -1,5 +1,5 @@
 /* ====================================================================
- * bootstrap-ajax.js v0.5.0
+ * bootstrap-ajax.js v0.5.1
  * ====================================================================
  *rewrite by tongyi121,
  *add something remove something in my idea.
@@ -46,7 +46,11 @@ function executeFunctionByName(functionName, context /*, args */) {
             params.method = 'POST'
         }
         e.preventDefault();
-        bootAjax(params);
+        if (!$this.find("input,select,textarea").not("[type=submit]").jqBootstrapValidation("hasErrors")) {
+            $this.find("input[type=submit],button[type=submit]").attr("disabled", "disabled");
+            bootAjax(params);
+        }
+
     };
 
     function bindParams($this) {
@@ -63,7 +67,7 @@ function executeFunctionByName(functionName, context /*, args */) {
         }
     }
 
-    var spinOpts = {radius: 30, length: 0, width: 10, color: '#C40000', trail: 40};
+    var spinOpts = {radius: 20,lines: 10, length: 5, width: 10, color: '#000', trail: 30,zIndex:2};
 
     function spin(selector, flag) {
         var opts = (flag == true ? spinOpts : false);
@@ -121,19 +125,15 @@ function executeFunctionByName(functionName, context /*, args */) {
                             } else
                                 $el.html(data.html).bootAjax();
                         }
-
                     } else {
                         if (append) {
                             $el.append(data).bootAjax();
                         } else
                             $el.html(data).bootAjax();
                     }
-
-
                 }
                 if (dataType == 'json') {
                     if (data.callback) {
-
                         executeFunctionByName(data.callback, window, data.callbackParams ? data.callbackParams : {});
                     }
                 }
@@ -202,7 +202,7 @@ function executeFunctionByName(functionName, context /*, args */) {
                 $this.find('a.ajax').bind('click', Ajax.prototype.click);
                 $this.find('form.ajax').bind('submit', Ajax.prototype.submit);
                 //以下依赖于datepicker与jqBootstrapValidation
-                $this.find('.datepicker').datepicker();
+                $this.find('.datepicker').datepicker({autoclose:true});
                 $this.find("input,select,textarea").not("[type=submit]").jqBootstrapValidation();
             });
         }
